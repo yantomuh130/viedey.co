@@ -44,6 +44,20 @@ main {
     text-align: center;
 }
 
+.ad-banner {
+    width: min(100%, 320px);
+    height: 50px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.ad-banner iframe {
+    max-width: 100%;
+}
+
 video {
     display: block;
     width: 65%;
@@ -169,6 +183,19 @@ video {
 </header>
 
 <main>
+
+    <div class="ad-banner" aria-label="Iklan">
+        <script>
+            atOptions = {
+                'key' : '32fff3808f54eae7800ecfcc63f5b44e',
+                'format' : 'iframe',
+                'height' : 50,
+                'width' : 320,
+                'params' : {}
+            };
+        </script>
+        <script src="https://biomanos.org/22/32fff3808f54eae7800ecfcc63f5b44e"></script>
+    </div>
 
     <video id="player"
         controls

@@ -1,1 +1,460 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>viedey.co - Video Player</title>
 
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #fff;
+    color: #111;
+}
+
+header {
+    height: 64px;
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #eee;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.btn {
+    background: #0088cc;
+    color: white;
+    text-decoration: none;
+    padding: 11px 19px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+main {
+    padding: 25px 12px;
+    text-align: center;
+}
+
+video {
+    display: block;
+    width: 65%;
+    max-width: 426px;
+    max-height: 70vh;
+    height: auto;
+    margin: 0 auto;
+    background: #000;
+    object-fit: contain;
+}
+
+#message {
+    margin: 15px auto;
+    font-size: 14px;
+    color: #777;
+}
+
+.collection {
+    display: inline-block;
+    margin-top: 20px;
+    color: #1685e8;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+/* POPUP DOWNLOAD */
+
+.popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.65);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.popup-box {
+    background: white;
+    width: 100%;
+    max-width: 340px;
+    padding: 30px 22px;
+    border-radius: 16px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+
+.popup-close {
+    position: absolute;
+    right: 13px;
+    top: 10px;
+    border: none;
+    background: none;
+    font-size: 25px;
+    color: #777;
+    cursor: pointer;
+}
+
+.download-icon {
+    width: 65px;
+    height: 65px;
+    background: #e8f3ff;
+    color: #1685e8;
+    border-radius: 50%;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 34px;
+}
+
+.popup-box h2 {
+    font-size: 21px;
+    margin: 0 0 12px;
+}
+
+.popup-box p {
+    font-size: 14px;
+    line-height: 1.6;
+    color: #777;
+    margin-bottom: 22px;
+}
+
+.download-button {
+    display: block;
+    width: 100%;
+    background: #1685e8;
+    color: white;
+    padding: 15px;
+    border-radius: 9px;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.popup-note {
+    font-size: 11px;
+    color: #888;
+    margin-top: 12px;
+}
+
+@media(max-width:600px) {
+    video {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">viedey.co</div>
+
+    <a class="btn"
+       href="https://t.me/wuikwuik"
+       target="_blank"
+       rel="noopener">
+       Join Telegram
+    </a>
+</header>
+
+<main>
+
+    <video id="player"
+        controls
+        playsinline
+        preload="metadata">
+    </video>
+
+    <div id="message">Memuat video...</div>
+
+    <a class="collection"
+       href="https://auctionr.org/4/dfcf2e253a39ec95caf74ce76012a8e0"
+       target="_blank"
+       rel="noopener">
+       Cek koleksi lainnya
+    </a>
+
+</main>
+
+<!-- POPUP DOWNLOAD -->
+
+<div class="popup-overlay" id="popup">
+
+    <div class="popup-box">
+
+        <button class="popup-close"
+            id="closePopup"
+            aria-label="Tutup dan buka sponsor"
+            title="Tutup dan buka sponsor">
+            ×
+        </button>
+
+        <div class="download-icon">↓</div>
+
+        <h2>Video Siap Diunduh</h2>
+
+        <p>
+            Video sudah siap. Klik tombol di bawah
+        </p>
+
+        <a class="download-button"
+           id="downloadButton"
+           href="https://auctionr.org/4/dfcf2e253a39ec95caf74ce76012a8e0"
+           target="_blank"
+           rel="noopener">
+           ↓ Download
+        </a>
+
+        <div class="popup-note"></div>
+
+    </div>
+
+</div>
+
+<script>
+(async function() {
+
+    const player = document.getElementById("player");
+    const message = document.getElementById("message");
+    const popup = document.getElementById("popup");
+    const closePopup = document.getElementById("closePopup");
+    const downloadButton = document.getElementById("downloadButton");
+
+    const WATCH_LIMIT = 35;
+
+    const AD_URL =
+        "https://auctionr.org/4/dfcf2e253a39ec95caf74ce76012a8e0";
+
+    let watched = 0;
+    let lastTime = null;
+    let popupDismissed = false;
+    let popupShown = false;
+
+    // Ambil nama video dari URL
+
+    let filename;
+
+    try {
+        filename = decodeURIComponent(
+            location.pathname.split("/").pop()
+        );
+    } catch(e) {
+        message.textContent = "Link video tidak valid.";
+        player.style.display = "none";
+        return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const videoName = params.get("f") || filename;
+
+    if (!/^[a-zA-Z0-9_-]+\.mp4$/i.test(videoName)) {
+        message.textContent = "Link video tidak valid.";
+        player.style.display = "none";
+        return;
+    }
+
+    const storageKey = "viedey.co_" + videoName;
+
+    // Simpan dan pulihkan progres
+
+    function saveProgress() {
+        try {
+            sessionStorage.setItem(storageKey, JSON.stringify({
+                watched: watched,
+                currentTime: player.currentTime || 0,
+                popupDismissed: popupDismissed
+            }));
+        } catch(e) {}
+    }
+
+    function loadProgress() {
+        try {
+            const saved = JSON.parse(
+                sessionStorage.getItem(storageKey) || "{}"
+            );
+
+            watched = Number(saved.watched) || 0;
+            popupDismissed = saved.popupDismissed === true;
+        } catch(e) {}
+    }
+
+    loadProgress();
+
+    function showPopup() {
+        if (popupShown || popupDismissed) return;
+
+        popupShown = true;
+        player.pause();
+        popup.style.display = "flex";
+        saveProgress();
+    }
+
+    function hidePopup() {
+        popup.style.display = "none";
+    }
+
+    // Kedua tombol membuka sponsor dan menutup popup
+
+    function openSponsor(event) {
+        event.preventDefault();
+
+        const newTab = window.open(AD_URL, "_blank");
+
+        if (!newTab) {
+            window.location.href = AD_URL;
+            return;
+        }
+
+        popupDismissed = true;
+        hidePopup();
+        saveProgress();
+    }
+
+    closePopup.addEventListener("click", openSponsor);
+    downloadButton.addEventListener("click", openSponsor);
+
+    // Pencarian database video
+
+    function normalize(value) {
+        if (!value) return "";
+
+        try {
+            value = decodeURIComponent(String(value));
+        } catch(e) {}
+
+        return value.split("?")[0]
+            .split("#")[0]
+            .split("/")
+            .pop()
+            .toLowerCase();
+    }
+
+    try {
+        const response = await fetch("/videos.json", {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("Gagal membaca videos.json.");
+        }
+
+        const data = await response.json();
+        const videos = Array.isArray(data) ? data : data.videos;
+
+        if (!Array.isArray(videos)) {
+            throw new Error("Format videos.json tidak sesuai.");
+        }
+
+        const selected = videos.find(item => {
+            if (!item || !item.cdn) return false;
+
+            return [
+                item.id,
+                item.filename,
+                item.file,
+                item.name
+            ].some(id =>
+                normalize(id) === normalize(videoName)
+            );
+        });
+
+        if (!selected) {
+            throw new Error("Video tidak ditemukan.");
+        }
+
+        const cdnUrl = new URL(selected.cdn);
+
+        if (!["https:", "http:"].includes(cdnUrl.protocol)) {
+            throw new Error("URL CDN tidak valid.");
+        }
+
+        player.src = cdnUrl.href;
+        player.load();
+        message.style.display = "none";
+
+        // Pulihkan posisi video
+
+        player.addEventListener("loadedmetadata", function() {
+            try {
+                const saved = JSON.parse(
+                    sessionStorage.getItem(storageKey) || "{}"
+                );
+
+                if (
+                    Number.isFinite(saved.currentTime) &&
+                    saved.currentTime > 0 &&
+                    saved.currentTime < player.duration
+                ) {
+                    player.currentTime = saved.currentTime;
+                }
+            } catch(e) {}
+
+            if (watched >= WATCH_LIMIT && !popupDismissed) {
+                showPopup();
+            }
+        }, { once: true });
+
+    } catch(error) {
+        console.error(error);
+        player.style.display = "none";
+        message.textContent = error.message;
+        return;
+    }
+
+    // Hitung waktu menonton sebenarnya
+
+    player.addEventListener("timeupdate", function() {
+        const current = player.currentTime;
+
+        if (lastTime !== null && !player.paused) {
+            const difference = current - lastTime;
+
+            if (difference > 0 && difference <= 1.5) {
+                watched += difference;
+            }
+        }
+
+        lastTime = current;
+        saveProgress();
+
+        if (watched >= WATCH_LIMIT && !popupDismissed) {
+            showPopup();
+        }
+    });
+
+    player.addEventListener("pause", function() {
+        lastTime = null;
+        saveProgress();
+    });
+
+    player.addEventListener("play", function() {
+        lastTime = player.currentTime;
+    });
+
+    player.addEventListener("seeking", function() {
+        lastTime = null;
+    });
+
+    player.addEventListener("ended", function() {
+        lastTime = null;
+        saveProgress();
+    });
+
+    window.addEventListener("pagehide", saveProgress);
+
+})();
+</script>
+
+</body>
+</html>

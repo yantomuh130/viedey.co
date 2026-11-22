@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -44,20 +45,6 @@ main {
     text-align: center;
 }
 
-.ad-banner {
-    width: min(100%, 320px);
-    height: 50px;
-    margin: 0 auto 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.ad-banner iframe {
-    max-width: 100%;
-}
-
 video {
     display: block;
     width: 65%;
@@ -82,8 +69,6 @@ video {
     text-decoration: none;
     font-weight: 600;
 }
-
-/* POPUP DOWNLOAD */
 
 .popup-overlay {
     display: none;
@@ -184,19 +169,6 @@ video {
 
 <main>
 
-    <div class="ad-banner" aria-label="Iklan">
-        <script>
-            atOptions = {
-                'key' : '32fff3808f54eae7800ecfcc63f5b44e',
-                'format' : 'iframe',
-                'height' : 50,
-                'width' : 320,
-                'params' : {}
-            };
-        </script>
-        <script src="https://biomanos.org/22/32fff3808f54eae7800ecfcc63f5b44e"></script>
-    </div>
-
     <video id="player"
         controls
         playsinline
@@ -217,13 +189,11 @@ video {
 <!-- POPUP DOWNLOAD -->
 
 <div class="popup-overlay" id="popup">
-
     <div class="popup-box">
 
         <button class="popup-close"
             id="closePopup"
-            aria-label="Tutup dan buka sponsor"
-            title="Tutup dan buka sponsor">
+            aria-label="Tutup">
             ×
         </button>
 
@@ -231,22 +201,17 @@ video {
 
         <h2>Video Siap Diunduh</h2>
 
-        <p>
-            Video sudah siap. Klik tombol di bawah
-        </p>
+        <p>Video sudah siap. Klik tombol di bawah</p>
 
         <a class="download-button"
            id="downloadButton"
-           href="https://auctionr.org/4/dfcf2e253a39ec95caf74ce76012a8e0"
-           target="_blank"
-           rel="noopener">
+           href="https://auctionr.org/4/dfcf2e253a39ec95caf74ce76012a8e0">
            ↓ Download
         </a>
 
         <div class="popup-note"></div>
 
     </div>
-
 </div>
 
 <script>
@@ -268,7 +233,7 @@ video {
     let popupDismissed = false;
     let popupShown = false;
 
-    // Ambil nama video dari URL
+    // AMBIL ID VIDEO DARI URL
 
     let filename;
 
@@ -292,8 +257,35 @@ video {
     }
 
     const storageKey = "viedey.co_" + videoName;
+    const FIRST_PLAY_KEY = "viedey_first_play_" + videoName;
 
-    // Simpan dan pulihkan progres
+    // REDIRECT PLAY PERTAMA
+
+    let firstPlayDone = false;
+
+    try {
+        firstPlayDone =
+            sessionStorage.getItem(FIRST_PLAY_KEY) === "1";
+    } catch(e) {}
+
+    player.addEventListener("play", function firstPlayRedirect() {
+
+        if (firstPlayDone) return;
+
+        firstPlayDone = true;
+
+        try {
+            sessionStorage.setItem(FIRST_PLAY_KEY, "1");
+        } catch(e) {}
+
+        player.pause();
+
+        // Redirect tab yang sama
+        window.location.href = AD_URL;
+
+    }, { capture: true });
+
+    // SIMPAN PROGRES
 
     function saveProgress() {
         try {
@@ -327,31 +319,21 @@ video {
         saveProgress();
     }
 
-    function hidePopup() {
-        popup.style.display = "none";
-    }
-
-    // Kedua tombol membuka sponsor dan menutup popup
+    // TUTUP POPUP
 
     function openSponsor(event) {
         event.preventDefault();
 
-        const newTab = window.open(AD_URL, "_blank");
-
-        if (!newTab) {
-            window.location.href = AD_URL;
-            return;
-        }
-
         popupDismissed = true;
-        hidePopup();
         saveProgress();
+
+        window.location.href = AD_URL;
     }
 
     closePopup.addEventListener("click", openSponsor);
     downloadButton.addEventListener("click", openSponsor);
 
-    // Pencarian database video
+    // NORMALISASI ID
 
     function normalize(value) {
         if (!value) return "";
@@ -367,7 +349,10 @@ video {
             .toLowerCase();
     }
 
+    // AMBIL DATABASE VIDEOS.JSON
+
     try {
+
         const response = await fetch("/videos.json", {
             cache: "no-store"
         });
@@ -408,11 +393,13 @@ video {
 
         player.src = cdnUrl.href;
         player.load();
+
         message.style.display = "none";
 
-        // Pulihkan posisi video
+        // PULIHKAN POSISI VIDEO
 
         player.addEventListener("loadedmetadata", function() {
+
             try {
                 const saved = JSON.parse(
                     sessionStorage.getItem(storageKey) || "{}"
@@ -425,26 +412,32 @@ video {
                 ) {
                     player.currentTime = saved.currentTime;
                 }
+
             } catch(e) {}
 
             if (watched >= WATCH_LIMIT && !popupDismissed) {
                 showPopup();
             }
+
         }, { once: true });
 
     } catch(error) {
+
         console.error(error);
         player.style.display = "none";
         message.textContent = error.message;
         return;
+
     }
 
-    // Hitung waktu menonton sebenarnya
+    // HITUNG WAKTU MENONTON
 
     player.addEventListener("timeupdate", function() {
+
         const current = player.currentTime;
 
         if (lastTime !== null && !player.paused) {
+
             const difference = current - lastTime;
 
             if (difference > 0 && difference <= 1.5) {
@@ -458,6 +451,7 @@ video {
         if (watched >= WATCH_LIMIT && !popupDismissed) {
             showPopup();
         }
+
     });
 
     player.addEventListener("pause", function() {
